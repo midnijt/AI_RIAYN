@@ -27,6 +27,7 @@ class XGBoost:
             num_class=10,
             random_state=42,
             n_jobs=-1,
+            early_stopping_rounds=10,
         )
 
     def fit(self, X_train, y_train, X_val, y_val, params):
@@ -36,7 +37,6 @@ class XGBoost:
             X_train,
             y_train,
             eval_set=[(X_val, y_val)],
-            early_stopping_rounds=10,
             verbose=False,
         )
 

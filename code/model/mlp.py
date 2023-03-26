@@ -9,7 +9,9 @@ from copy import deepcopy
 
 
 class RegularizedMLP(nn.Module):
-    def __init__(self, n_inputs, n_outputs, search_space):
+    def __init__(
+        self, n_inputs, n_outputs, search_space, n_layers=9, n_hidden_units=512
+    ):
         super(RegularizedMLP, self).__init__()
         self.n_inputs = n_inputs
         self.n_outputs = n_outputs
@@ -17,69 +19,38 @@ class RegularizedMLP(nn.Module):
         self.model = None
         self.optimizer = None
         self.regularizers = []
+        self.n_layers = n_layers
+        self.n_hidden_units = n_hidden_units
 
     def build_model(self, **params):
         layers = [
-            nn.Linear(self.n_inputs, 64),
+            nn.Linear(self.n_inputs, self.n_hidden_units),
             nn.ReLU(),
-            nn.BatchNorm1d(64),
         ]
 
-        if params["BN-active"]:
-            layers.append(nn.BatchNorm1d(64))
+        for _ in range(7):
+            layers.extend(
+                [
+                    nn.Linear(self.n_hidden_units, self.n_hidden_units),
+                    nn.ReLU(),
+                ]
+            )
+            if params["BN-active"]:
+                layers.append(nn.BatchNorm1d(self.n_hidden_units))
+            layers.append(nn.Dropout(p=params["DO-dropout_rate"]))
 
         layers.extend(
             [
-                nn.Linear(64, 32),
-                nn.ReLU(),
-                nn.Dropout(params["DO-dropout_rate"]),
+                nn.Linear(self.n_hidden_units, self.n_outputs),
+                nn.Softmax(dim=1),
             ]
         )
 
-        if params["DO-active"]:
-            dropout_shape = params["DO-shape"]
-            if dropout_shape == "funnel":
-                dropout_shape = [1.0, 0.75, 0.5, 0.25]
-            elif dropout_shape == "long funnel":
-                dropout_shape = [1.0, 0.875, 0.75, 0.625, 0.5, 0.375, 0.25]
-            elif dropout_shape == "diamond":
-                dropout_shape = [1.0, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5, 0.5]
-            elif dropout_shape == "hexagon":
-                dropout_shape = [1.0, 0.67, 0.33, 0.67, 0.33, 0.67, 0.33]
-            elif dropout_shape == "brick":
-                dropout_shape = [
-                    1.0,
-                    0.95,
-                    0.9,
-                    0.85,
-                    0.8,
-                    0.75,
-                    0.7,
-                    0.65,
-                    0.6,
-                    0.55,
-                    0.5,
-                ]
-            elif dropout_shape == "triangle":
-                dropout_shape = [1.0, 0.8, 0.6, 0.4, 0.2]
-            elif dropout_shape == "stairs":
-                dropout_shape = [1.0, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1]
-            else:
-                dropout_shape = [params["DO-dropout_rate"]]
-        for rate in dropout_shape:
-            layers.append(nn.Dropout(rate))
-
-        layers.append(nn.Linear(32, self.n_outputs))
-        layers.append(nn.Softmax(dim=1))
-
         self.model = nn.Sequential(*layers)
 
-        if params["WD-active"]:
-            self.optimizer = optim.Adam(
-                self.model.parameters(), lr=params["lr"], weight_decay=params["WD-l2"]
-            )
-        else:
-            self.optimizer = optim.Adam(self.model.parameters(), lr=params["lr"])
+        self.optimizer = optim.AdamW(
+            self.model.parameters(), lr=params["lr"], weight_decay=params["WD-l2"]
+        )
 
     def fit(self, X_train, y_train, X_val, y_val, params, device="cpu", batch_size=32):
         self.build_model(**params)
