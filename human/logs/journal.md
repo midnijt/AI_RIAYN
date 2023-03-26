@@ -481,3 +481,48 @@ It works!! I've never made a VSCode extension before much less written in javasc
 Now I'm going to try making the second: a chrome extension that will copy the chatgpt chat in a well-formatted way to improve these logs
 
 ... After much back and forth I couldn't get it to work. Likely because I couldn't formulate the problem correctly given that the webpage uses javascript to load in the conversations :(
+
+================
+
+I decided to ask bard this time around:
+
+I have the following abstract from a paper:
+
+```
+Tabular datasets are the last “unconquered castle” for deep learning, with traditional
+ML methods like Gradient-Boosted Decision Trees still performing strongly even
+against recent specialized neural architectures. In this paper, we hypothesize that
+the key to boosting the performance of neural networks lies in rethinking the joint
+and simultaneous application of a large set of modern regularization techniques.
+As a result, we propose regularizing plain Multilayer Perceptron (MLP) networks
+by searching for the optimal combination/cocktail of 13 regularization techniques
+for each dataset using a joint optimization over the decision on which regularizers
+to apply and their subsidiary hyperparameters.
+We empirically assess the impact of these regularization cocktails for MLPs in a
+large-scale empirical study comprising 40 tabular datasets and demonstrate that
+(i) well-regularized plain MLPs significantly outperform recent state-of-the-art
+specialized neural network architectures, and (ii) they even outperform strong
+traditional ML methods, such as XGBoost.
+```
+
+Could you write out the structure of a codebase that would allow me to test neural networks against tree based models like this?
+View other drafts
+
+Sure, here is a possible structure for a codebase that would allow you to test neural networks against tree based models:
+
+    Data: The codebase would need to have a dataset of tabular data that can be used to train and test both neural networks and tree based models.
+    Modeling: The codebase would need to have implementations of both neural networks and tree based models.
+    Evaluation: The codebase would need to have a way to evaluate the performance of both neural networks and tree based models on the dataset.
+    Experiments: The codebase would need to have a way to run experiments to compare the performance of neural networks and tree based models.
+
+Here is a more detailed description of each of these components:
+
+    Data: The data should be in a format that is easy to read and process. It should also be labeled, so that you know which columns correspond to which features and which rows correspond to which instances.
+    Modeling: The neural network implementation should be able to take in the data and learn a model from it. The tree based model implementation should also be able to take in the data and learn a model from it.
+    Evaluation: The evaluation should measure the performance of the models on the dataset. This could be done using accuracy, precision, recall, or other metrics.
+    Experiments: The experiments should compare the performance of the neural networks and tree based models on the dataset. This could be done by running multiple experiments with different parameters and settings.
+
+This is just one possible structure for a codebase that would allow you to test neural networks against tree based models. There are many other ways to structure such a codebase, and the best approach will depend on the specific needs of your project.
+============
+Seems pretty reasonable. I made the directories that follow this. I now wanted to move on to implementing the regularization in the paper, but this was too large to paste into bard's chat box. I started the conversation off the same way with GPT3.5 and then pasted the text in
+
