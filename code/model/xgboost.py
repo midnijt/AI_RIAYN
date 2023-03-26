@@ -47,13 +47,20 @@ class XGBoost:
 
     def hyperparameter_tuning(self, X_train, y_train, X_val, y_val, n_iterations=50):
         def objective_function(**params):
+            for k, v in self.search_space.items():
+                if v["type"] == "int":
+                    params[k] = int(params[k])
             self.fit(X_train, y_train, X_val, y_val, params)
             acc = self.evaluate(X_val, y_val)
             return -acc
 
+        pbounds = {}
+        for k, v in self.search_space.items():
+            pbounds[k] = (v["min"], v["max"])
+
         optimizer = BayesianOptimization(
             f=objective_function,
-            pbounds=self.search_space,
+            pbounds=pbounds,
             random_state=42,
         )
 
@@ -61,12 +68,16 @@ class XGBoost:
 
         best_params = optimizer.max["params"]
 
+        for k, v in self.search_space.items():
+            if v["type"] == "int":
+                best_params[k] = int(best_params[k])
+
         self.fit(X_train, y_train, X_val, y_val, best_params)
 
         return best_params
 
 
-search_space = {
+xgb_search_space = {
     "eta": {"type": "float", "min": 0.001, "max": 1.0},
     "lambda": {"type": "float", "min": 1e-10, "max": 1.0},
     "alpha": {"type": "float", "min": 1e-10, "max": 1.0},
