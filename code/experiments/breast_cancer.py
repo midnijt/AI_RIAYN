@@ -35,7 +35,11 @@ def main():
     )
 
     mlp_params = mlp.hyperparameter_tuning(
-        X_train=X_train, y_train=y_train, X_val=X_test, y_val=y_test
+        X_train=X_train,
+        y_train=y_train,
+        X_val=X_test,
+        y_val=y_test,
+        n_iterations=15,
     )
 
     acc = mlp.evaluate(X_test, y_test)
