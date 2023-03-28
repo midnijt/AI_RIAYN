@@ -5,7 +5,7 @@ from sklearn.preprocessing import StandardScaler
 import sys
 
 sys.path.append("/Users/jtam/projects/AI_RIAYN/code/")
-from model.mlp import RegularizedMLP
+from model.mlp import RegularizedMLP, mlp_search_space
 from model.xgboost import XGBoost, xgb_search_space
 
 
@@ -29,29 +29,9 @@ def main():
     mlp = RegularizedMLP(
         n_inputs=X_train.shape[1],
         n_outputs=len(np.unique(y_train)),
-        search_space={
-            "BN-active": {"type": "bool"},
-            "BN-l2": {"type": "float", "min": 1e-10, "max": 1.0},
-            "DO-active": {"type": "bool"},
-            "DO-dropout_rate": {"type": "float", "min": 0.1, "max": 0.9},
-            "DO-shape": {
-                "type": "nominal",
-                "values": [
-                    "funnel",
-                    "long funnel",
-                    "diamond",
-                    "hexagon",
-                    "brick",
-                    "triangle",
-                    "stairs",
-                    "constant",
-                ],
-            },
-            "WD-active": {"type": "bool"},
-            "WD-l2": {"type": "float", "min": 1e-10, "max": 1.0},
-            "WD-decay": {"type": "float", "min": 0.0, "max": 1.0},
-            "lr": {"type": "float", "min": 1e-5, "max": 1e-1},
-        },
+        search_space=mlp_search_space,
+        n_layers=2,
+        n_hidden_units=64,
     )
 
     mlp_params = mlp.hyperparameter_tuning(

@@ -1,1 +1,36 @@
-human/logs/journal.md
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# C extensions
+*.so
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+
+# Virtual environments
+venv/
+env/
+.venv/
+ENV/
+
+# IDEs and editors
+.idea/
+.vscode/
+*.pydevproject
+*.pyc
+*.pyo
+*.sage.py
+
+# Jupyter Notebook
+.ipynb_checkpoints/
+
+# Other
+*.log
+*.bak
+*.swp
+*.sqlite3
+*.DS_Store
