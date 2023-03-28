@@ -56,7 +56,7 @@ class XGBoost:
 
         pbounds = {}
         for k, v in self.search_space.items():
-            pbounds[k] = (v["min"], v["max"])
+            pbounds[k] = v["range"]
 
         optimizer = BayesianOptimization(
             f=objective_function,
@@ -78,16 +78,16 @@ class XGBoost:
 
 
 xgb_search_space = {
-    "eta": {"type": "float", "min": 0.001, "max": 1.0},
-    "lambda": {"type": "float", "min": 1e-10, "max": 1.0},
-    "alpha": {"type": "float", "min": 1e-10, "max": 1.0},
-    "num_round": {"type": "int", "min": 1, "max": 1000},
-    "gamma": {"type": "float", "min": 0.1, "max": 1.0},
-    "colsample_bylevel": {"type": "float", "min": 0.1, "max": 1.0},
-    "colsample_bynode": {"type": "float", "min": 0.1, "max": 1.0},
-    "colsample_bytree": {"type": "float", "min": 0.5, "max": 1.0},
-    "max_depth": {"type": "int", "min": 1, "max": 20},
-    "max_delta_step": {"type": "int", "min": 0, "max": 10},
-    "min_child_weight": {"type": "float", "min": 0.1, "max": 20.0},
-    "subsample": {"type": "float", "min": 0.01, "max": 1.0},
+    "eta": {"type": "float", "range": [0.001, 1.0]},
+    "lambda": {"type": "float", "range": [1e-10, 1.0]},
+    "alpha": {"type": "float", "range": [1e-10, 1.0]},
+    "num_round": {"type": "int", "range": [1, 1000]},
+    "gamma": {"type": "float", "range": [0.1, 1.0]},
+    "colsample_bylevel": {"type": "float", "range": [0.1, 1.0]},
+    "colsample_bynode": {"type": "float", "range": [0.1, 1.0]},
+    "colsample_bytree": {"type": "float", "range": [0.5, 1.0]},
+    "max_depth": {"type": "int", "range": [1, 20]},
+    "max_delta_step": {"type": "int", "range": [0, 10]},
+    "min_child_weight": {"type": "float", "range": [0.1, 20.0]},
+    "subsample": {"type": "float", "range": [0.01, 1.0]},
 }

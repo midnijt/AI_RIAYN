@@ -60,12 +60,6 @@ class RegularizedMLP(nn.Module):
 
         self.model = nn.Sequential(*layers)
 
-        self.optimizer = optim.AdamW(
-            self.model.parameters(),
-            lr=self.learning_rate,
-            weight_decay=params["WD-decay_factor"],
-        )
-
     def fit(self, X_train, y_train, X_val, y_val, params, device="cpu", batch_size=32):
         self.build_model(**params)
         self.model.to(device)
@@ -99,18 +93,57 @@ class RegularizedMLP(nn.Module):
         patience = 10
         patience_counter = 0
 
-        for epoch in range(100):
+        n_snapshots = 5
+        snapshot_interval = 20
+        n_epochs = n_snapshots * snapshot_interval
+
+        optimizer = optim.AdamW(
+            self.model.parameters(),
+            lr=self.learning_rate,
+            weight_decay=params["WD-decay_factor"],
+        )
+
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, n_epochs)
+
+        for epoch in range(n_epochs):
             self.model.train()
+
+            if epoch % snapshot_interval == 0:
+                snapshot_index = epoch // snapshot_interval
+                snapshot_model_filename = f"snapshot_model_{snapshot_index}.pt"
+                torch.save(self.model.state_dict(), snapshot_model_filename)
+                snapshot_optimizer_state_filename = (
+                    f"snapshot_optimizer_state_{snapshot_index}.pt"
+                )
+                torch.save(optimizer.state_dict(), snapshot_optimizer_state_filename)
+                snapshot_val_loss = 0
+                with torch.no_grad():
+                    for inputs, targets in val_loader:
+                        outputs = self.model(inputs)
+                        loss = criterion(outputs, targets)
+                        snapshot_val_loss += loss.item()
+
+                snapshot_val_loss /= len(val_loader)
+                if snapshot_val_loss < best_val_loss:
+                    best_val_loss = snapshot_val_loss
+                    best_model = deepcopy(self.model)
+                    patience_counter = 0
+                else:
+                    patience_counter += 1
+
+                if patience_counter >= patience:
+                    break
 
             for inputs, targets in train_loader:
                 if augmentation is not None:
                     inputs = augmentation(inputs)
 
-                self.optimizer.zero_grad()
+                optimizer.zero_grad()
                 outputs = self.model(inputs)
                 loss = criterion(outputs, targets)
                 loss.backward()
-                self.optimizer.step()
+                optimizer.step()
+                scheduler.step()
 
             self.model.eval()
             val_loss = 0

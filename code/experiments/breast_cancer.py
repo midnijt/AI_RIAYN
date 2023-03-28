@@ -39,7 +39,7 @@ def main():
         y_train=y_train,
         X_val=X_test,
         y_val=y_test,
-        n_iterations=15,
+        n_iterations=1,
     )
 
     acc = mlp.evaluate(X_test, y_test)
