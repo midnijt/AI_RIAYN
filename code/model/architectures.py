@@ -39,12 +39,9 @@ class Architectures:
             if params["DO-active"] > 0.5:
                 layers.append(nn.Dropout(p=params["DO-dropout_rate"]))
 
-        layers.extend(
-            [
-                nn.Linear(self.n_hidden_units, self.n_outputs),
-                nn.Softmax(dim=1),
-            ]
-        )
+        layers.append(nn.Linear(self.n_hidden_units, self.n_outputs))
+        if not params["regression"]:
+            layers.append(nn.Softmax(dim=1))
 
         self.model = nn.Sequential(*layers)
 
@@ -66,12 +63,9 @@ class Architectures:
 
             layers.append(SkipConnection(nn.Sequential(*hidden_layer)))
 
-        layers.extend(
-            [
-                nn.Linear(self.n_hidden_units, self.n_outputs),
-                nn.Softmax(dim=1),
-            ]
-        )
+        layers.append(nn.Linear(self.n_hidden_units, self.n_outputs))
+        if not params["regression"]:
+            layers.append(nn.Softmax(dim=1))
 
         self.model = nn.Sequential(*layers)
 
@@ -122,13 +116,10 @@ class Architectures:
             layers.append(Shake(nn.Sequential(*path1), nn.Sequential(*path2)))
 
         # Final layers
-        layers.extend(
-            [
-                nn.Linear(self.n_hidden_units, self.n_outputs),
-                nn.Softmax(dim=1),
-            ]
-        )
 
+        layers.append(nn.Linear(self.n_hidden_units, self.n_outputs))
+        if not params["regression"]:
+            layers.append(nn.Softmax(dim=1))
         # Build the model
         self.model = nn.Sequential(*layers)
 
@@ -186,12 +177,10 @@ class Architectures:
             )
 
         # Final layers
-        layers.extend(
-            [
-                nn.Linear(self.n_hidden_units, self.n_outputs),
-                nn.Softmax(dim=1),
-            ]
-        )
+
+        layers.append(nn.Linear(self.n_hidden_units, self.n_outputs))
+        if not params["regression"]:
+            layers.append(nn.Softmax(dim=1))
 
         # Build the model
         self.model = nn.Sequential(*layers)

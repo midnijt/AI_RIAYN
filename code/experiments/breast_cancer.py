@@ -1,5 +1,5 @@
 import numpy as np
-from sklearn.datasets import load_iris, load_breast_cancer
+from sklearn.datasets import fetch_california_housing
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
 import sys
@@ -12,7 +12,7 @@ import model.search_space as search_space
 
 def main():
     # Load dataset
-    dataset = load_breast_cancer()
+    dataset = fetch_california_housing()
     X = dataset.data
     y = dataset.target
 
@@ -29,7 +29,7 @@ def main():
     # Train and evaluate MLP
     mlp = NeuralNet(
         n_inputs=X_train.shape[1],
-        n_outputs=len(np.unique(y_train)),
+        n_outputs=1,  # Change the number of outputs to 1 for regression
         search_space=search_space.mlp,
         n_layers=2,
         n_hidden_units=64,
@@ -43,8 +43,8 @@ def main():
         n_iterations=1,
     )
 
-    acc = mlp.evaluate(X_test, y_test)
-    print(f"MLP accuracy: {acc:.2f}")
+    mse = mlp.evaluate(X_test, y_test)
+    print(f"MLP mean squared error: {mse:.2f}")
     print("Best MLP parameters:", mlp_params)
 
     # Train and evaluate XGBoost
@@ -54,8 +54,8 @@ def main():
         X_train=X_train, y_train=y_train, X_val=X_test, y_val=y_test
     )
 
-    acc = xgb.evaluate(X_test, y_test)
-    print(f"XGBoost accuracy: {acc:.2f}")
+    mse = xgb.evaluate(X_test, y_test)
+    print(f"XGBoost mean squared error: {mse:.2f}")
     print("Best XGBoost parameters:", xgb_params)
 
 

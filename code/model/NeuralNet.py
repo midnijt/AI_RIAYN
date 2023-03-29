@@ -3,7 +3,7 @@ import torch.nn as nn
 import torch.optim as optim
 from torch.utils.data import DataLoader, TensorDataset
 
-from sklearn.metrics import accuracy_score
+from sklearn.metrics import accuracy_score, mean_squared_error
 from torch.utils.data import DataLoader, TensorDataset
 
 from copy import deepcopy
@@ -35,10 +35,12 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         self.n_layers = n_layers
         self.n_hidden_units = n_hidden_units
         self.learning_rate = learning_rate
+        self.regression = n_outputs == 1
 
     def build_model(self, **params):
+        params["regression"] = self.regression
         MB_choice = self.search_space["MB-choice"]["values"][int(params["MB-choice"])]
-        print(MB_choice)
+
         if params["SC-active"] > 0.5:
             if MB_choice == "Standard":
                 self.SC(**params)
@@ -56,14 +58,14 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
     ):
         train_data = TensorDataset(
             torch.tensor(X_train, dtype=torch.float32).to(device),
-            torch.tensor(y_train, dtype=torch.long).to(device),
+            torch.tensor(y_train, dtype=torch.float32).to(device),
         )
 
         train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 
         val_data = TensorDataset(
             torch.tensor(X_val, dtype=torch.float32).to(device),
-            torch.tensor(y_val, dtype=torch.long).to(device),
+            torch.tensor(y_val, dtype=torch.float32).to(device),
         )
         val_loader = DataLoader(val_data, batch_size=batch_size)
 
@@ -89,7 +91,10 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         self.build_model(**params)
         self.model.to(device)
 
-        criterion = nn.CrossEntropyLoss()
+        if self.regression:
+            criterion = nn.MSELoss()
+        else:
+            criterion = nn.CrossEntropyLoss()
         best_model = None
         best_val_loss = float("inf")
         patience = 10
@@ -128,7 +133,20 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         augmentation = self._prepare_augmentation(params, data_shape=X_train.shape)
         for epoch in range(n_epochs):
             self.model.train()
+            for inputs, targets in train_loader:
+                if augmentation is not None:
+                    inputs = augmentation(inputs)
 
+                optimizer.zero_grad()
+                outputs = self.model(inputs)
+                if self.regression:
+                    outputs = outputs.squeeze()
+                loss = criterion(outputs, targets)
+                loss.backward()
+                optimizer.step()
+                scheduler.step()
+
+            self.model.eval()
             if epoch % snapshot_interval == 0:
                 snapshot_index = epoch // snapshot_interval
                 snapshot_model_filename = f"snapshot_model_{snapshot_index}.pt"
@@ -137,47 +155,19 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
                     f"snapshot_optimizer_state_{snapshot_index}.pt"
                 )
                 torch.save(optimizer.state_dict(), snapshot_optimizer_state_filename)
-                snapshot_val_loss = 0
-                with torch.no_grad():
-                    for inputs, targets in val_loader:
-                        outputs = self.model(inputs)
-                        loss = criterion(outputs, targets)
-                        snapshot_val_loss += loss.item()
 
-                snapshot_val_loss /= len(val_loader)
-                if snapshot_val_loss < best_val_loss:
-                    best_val_loss = snapshot_val_loss
-                    best_model = deepcopy(self.model)
-                    patience_counter = 0
-                else:
-                    patience_counter += 1
-
-                if patience_counter >= patience:
-                    break
-
-            for inputs, targets in train_loader:
-                if augmentation is not None:
-                    inputs = augmentation(inputs)
-
-                optimizer.zero_grad()
-                outputs = self.model(inputs)
-                loss = criterion(outputs, targets)
-                loss.backward()
-                optimizer.step()
-                scheduler.step()
-
-            self.model.eval()
-            val_loss = 0
+            snapshot_val_loss = 0
             with torch.no_grad():
                 for inputs, targets in val_loader:
                     outputs = self.model(inputs)
+                    if self.regression:
+                        outputs = outputs.squeeze()
                     loss = criterion(outputs, targets)
-                    val_loss += loss.item()
+                    snapshot_val_loss += loss.item()
 
-            val_loss /= len(val_loader)
-
-            if val_loss < best_val_loss:
-                best_val_loss = val_loss
+            snapshot_val_loss /= len(val_loader)
+            if snapshot_val_loss < best_val_loss:
+                best_val_loss = snapshot_val_loss
                 best_model = deepcopy(self.model)
                 patience_counter = 0
             else:
@@ -192,8 +182,13 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         self.model.eval()
         self.model.to(device)
         X_tensor = torch.tensor(X, dtype=torch.float32).to(device)
-        y_tensor = torch.tensor(y, dtype=torch.long).to(device)
+        y_tensor = torch.tensor(y, dtype=torch.float32).to(device)
         y_pred = self.model(X_tensor)
-        _, y_pred = torch.max(y_pred, 1)
-        acc = accuracy_score(y_tensor.cpu(), y_pred.cpu())
-        return acc
+        with torch.no_grad():
+            if self.regression:
+                y_pred = y_pred.squeeze()
+                metric = mean_squared_error(y_tensor.cpu(), y_pred.cpu())
+            else:
+                _, y_pred = torch.max(y_pred, 1)
+                metric = accuracy_score(y_tensor.cpu(), y_pred.cpu())
+        return metric
