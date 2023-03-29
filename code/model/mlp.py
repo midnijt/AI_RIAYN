@@ -49,7 +49,8 @@ class RegularizedMLP(nn.Module, BaseModel):
             )
             if params["BN-active"] > 0.5:
                 layers.append(nn.BatchNorm1d(self.n_hidden_units))
-            layers.append(nn.Dropout(p=params["DO-dropout_rate"]))
+            if params["DO-active"] > 0.5:
+                layers.append(nn.Dropout(p=params["DO-dropout_rate"]))
 
         layers.extend(
             [
@@ -108,10 +109,11 @@ class RegularizedMLP(nn.Module, BaseModel):
         snapshot_interval = 20
         n_epochs = n_snapshots * snapshot_interval
 
+        weight_decay = (params["WD-active"] > 0.5) * params["WD-decay_factor"]
         optimizer = optim.AdamW(
             self.model.parameters(),
             lr=self.learning_rate,
-            weight_decay=params["WD-decay_factor"],
+            weight_decay=weight_decay,
         )
 
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, n_epochs)
