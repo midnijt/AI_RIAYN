@@ -6,7 +6,7 @@ from sklearn.metrics import accuracy_score
 from bayes_opt import BayesianOptimization
 from torch.utils.data import DataLoader, TensorDataset
 from copy import deepcopy
-from base import BaseModel
+from .base import BaseModel
 import sys
 
 sys.path.append("/Users/jtam/projects/AI_RIAYN/code/")
@@ -40,14 +40,14 @@ class RegularizedMLP(nn.Module, BaseModel):
             nn.ReLU(),
         ]
 
-        for _ in range(self.n_layers - 2):
+        for _ in range(self.n_layers):
             layers.extend(
                 [
                     nn.Linear(self.n_hidden_units, self.n_hidden_units),
                     nn.ReLU(),
                 ]
             )
-            if params["BN-active"]:
+            if params["BN-active"] > 0.5:
                 layers.append(nn.BatchNorm1d(self.n_hidden_units))
             layers.append(nn.Dropout(p=params["DO-dropout_rate"]))
 
@@ -79,11 +79,13 @@ class RegularizedMLP(nn.Module, BaseModel):
         return train_loader, val_loader
 
     def _prepare_augmentation(self, params, data_shape):
-        if params["Augment"] == "MU":
+        augmentation = self.search_space["Augment"]["values"][int(params["Augment"])]
+
+        if augmentation == "MU":
             augmentation = MixUp1D(alpha=params["MU-mix_mag"])
-        elif params["Augment"] == "CM":
+        elif augmentation == "CM":
             augmentation = CutMix1D(alpha=params["CM-prob"])
-        elif params["Augment"] == "CO":
+        elif augmentation == "CO":
             augmentation = CutOut1D(
                 p=int(params["CO-prob"] * data_shape[1]),
             )
