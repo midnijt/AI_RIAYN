@@ -3,33 +3,6 @@ import torch.optim as optim
 import math
 
 
-class CosineAnnealingLRWithWarmup(optim.lr_scheduler._LRScheduler):
-    def __init__(
-        self, optimizer, warmup_epochs, total_epochs, eta_min=0, last_epoch=-1
-    ):
-        self.warmup_epochs = warmup_epochs
-        self.total_epochs = total_epochs
-        self.eta_min = eta_min
-        super().__init__(optimizer, last_epoch)
-
-    def get_lr(self):
-        if self.last_epoch < self.warmup_epochs:
-            return [
-                base_lr * (self.last_epoch + 1) / self.warmup_epochs
-                for base_lr in self.base_lrs
-            ]
-        else:
-            cosine_epochs = self.last_epoch - self.warmup_epochs
-            cosine_total_epochs = self.total_epochs - self.warmup_epochs
-            return [
-                self.eta_min
-                + (base_lr - self.eta_min)
-                * (1 + math.cos(math.pi * cosine_epochs / cosine_total_epochs))
-                / 2
-                for base_lr in self.base_lrs
-            ]
-
-
 class SWALookahead(optim.Optimizer):
     def __init__(
         self,

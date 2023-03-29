@@ -134,15 +134,15 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
             la_alpha=params["LA-step_size"],
         )
 
-        warmup_epochs = 10
-        scheduler = CosineAnnealingLRWithWarmup(
-            optimizer, warmup_epochs, n_epochs, eta_min=0, last_epoch=-1
+        scheduler = optim.lr_scheduler.CosineAnnealingWarmRestarts(
+            optimizer, T_0=15, T_mult=2, eta_min=0, last_epoch=-1
         )
 
         train_loader, val_loader = self._prepare_data(
             X_train, y_train, X_val, y_val, batch_size=batch_size, device=self.device
         )
         augmentation = self._prepare_augmentation(params, data_shape=X_train.shape)
+        learning_rates = []
         for epoch in range(n_epochs):
             self.model.train()
             for inputs, targets in train_loader:
@@ -156,6 +156,7 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
                 loss = criterion(outputs, targets)
                 loss.backward()
                 optimizer.step()
+                learning_rates.append(optimizer.param_groups[0]["lr"])
                 scheduler.step()
 
             self.model.eval()
