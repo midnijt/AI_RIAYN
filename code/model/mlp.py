@@ -6,14 +6,14 @@ from sklearn.metrics import accuracy_score
 from bayes_opt import BayesianOptimization
 from torch.utils.data import DataLoader, TensorDataset
 from copy import deepcopy
-
+from base import BaseModel
 import sys
 
 sys.path.append("/Users/jtam/projects/AI_RIAYN/code/")
 from data.augmentation import CutOut1D, MixUp1D, CutMix1D
 
 
-class RegularizedMLP(nn.Module):
+class RegularizedMLP(nn.Module, BaseModel):
     def __init__(
         self,
         n_inputs,
@@ -189,50 +189,6 @@ class RegularizedMLP(nn.Module):
         _, y_pred = torch.max(y_pred, 1)
         acc = accuracy_score(y_tensor.cpu(), y_pred.cpu())
         return acc
-
-    def hyperparameter_tuning(
-        self,
-        X_train,
-        y_train,
-        X_val,
-        y_val,
-        n_iterations=5,
-        device="cpu",
-        batch_size=32,
-    ):
-        def objective_function(**params):
-            for k in self.search_space.keys():
-                if self.search_space[k]["type"] == "nominal":
-                    params[k] = self.search_space[k]["values"][int(params[k])]
-            self.fit(X_train, y_train, X_val, y_val, params, device, batch_size)
-            acc = self.evaluate(X_val, y_val, device)
-            return -acc
-
-        pbounds = {}
-        for k, v in self.search_space.items():
-            if v["type"] == "bool":
-                pbounds[k] = (0, 1)
-            elif v["type"] == "nominal":
-                pbounds[k] = (0, len(v["values"]) - 1)
-            else:
-                pbounds[k] = v["range"]
-
-        optimizer = BayesianOptimization(
-            f=objective_function,
-            pbounds=pbounds,
-            random_state=42,
-        )
-
-        optimizer.maximize(n_iter=n_iterations)
-        best_params = {}
-        for k, v in optimizer.max["params"].items():
-            if self.search_space[k]["type"] == "nominal":
-                best_params[k] = self.search_space[k]["values"][int(v)]
-            else:
-                best_params[k] = v
-
-        self.fit(X_train, y_train, X_val, y_val, best_params, device, batch_size)
-        return best_params
 
 
 mlp_search_space = {
