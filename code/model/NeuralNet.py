@@ -25,6 +25,7 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         n_layers=9,
         n_hidden_units=512,
         learning_rate=0.001,
+        device="cpu",
     ):
         super(NeuralNet, self).__init__()
         self.n_inputs = n_inputs
@@ -35,6 +36,7 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         self.n_layers = n_layers
         self.n_hidden_units = n_hidden_units
         self.learning_rate = learning_rate
+        self.device = device
         self.regression = n_outputs == 1
         self.y_dtype = torch.float32 if self.regression else torch.long
 
@@ -88,9 +90,20 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
 
         return augmentation
 
-    def fit(self, X_train, y_train, X_val, y_val, params, device="cpu", batch_size=32):
+    def fit(
+        self,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
+        params,
+        batch_size=128,
+        n_snapshots=5,
+        snapshot_interval=10,
+        patience=10,
+    ):
         self.build_model(**params)
-        self.model.to(device)
+        self.model.to(self.device)
 
         if self.regression:
             criterion = nn.MSELoss()
@@ -98,11 +111,9 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
             criterion = nn.CrossEntropyLoss()
         best_model = None
         best_val_loss = float("inf")
-        patience = 1
+
         patience_counter = 0
 
-        n_snapshots = 5
-        snapshot_interval = 1
         n_epochs = n_snapshots * snapshot_interval
 
         weight_decay = (params["WD-active"] > 0.5) * params["WD-decay_factor"]
@@ -129,7 +140,7 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         )
 
         train_loader, val_loader = self._prepare_data(
-            X_train, y_train, X_val, y_val, batch_size=batch_size, device=device
+            X_train, y_train, X_val, y_val, batch_size=batch_size, device=self.device
         )
         augmentation = self._prepare_augmentation(params, data_shape=X_train.shape)
         for epoch in range(n_epochs):

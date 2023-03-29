@@ -19,7 +19,9 @@ class BaseModel(ABC):
     def evaluate(self, X, y):
         pass
 
-    def hyperparameter_tuning(self, X_train, y_train, X_val, y_val, n_iterations=50):
+    def hyperparameter_tuning(
+        self, X_train, y_train, X_val, y_val, n_iterations=50, **fit_kwargs
+    ):
         def objective_function(**params):
             for k, v in self.search_space.items():
                 if v["type"] == "int":
@@ -52,6 +54,6 @@ class BaseModel(ABC):
             if v["type"] == "int":
                 best_params[k] = int(best_params[k])
 
-        self.fit(X_train, y_train, X_val, y_val, best_params)
+        self.fit(X_train, y_train, X_val, y_val, best_params, **fit_kwargs)
 
         return best_params

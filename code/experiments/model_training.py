@@ -33,6 +33,7 @@ def train_and_evaluate_model(dataset, is_regression=False):
         search_space=search_space.mlp,
         n_layers=2,
         n_hidden_units=64,
+        device="cpu",
     )
 
     mlp_params = mlp.hyperparameter_tuning(
@@ -40,7 +41,11 @@ def train_and_evaluate_model(dataset, is_regression=False):
         y_train=y_train,
         X_val=X_test,
         y_val=y_test,
-        n_iterations=1,
+        n_iterations=10,
+        batch_size=128,
+        n_snapshots=5,
+        snapshot_interval=10,
+        patience=10,
     )
 
     if is_regression:
