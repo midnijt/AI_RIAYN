@@ -30,7 +30,12 @@ class BaseModel(ABC):
 
         pbounds = {}
         for k, v in self.search_space.items():
-            pbounds[k] = v["range"]
+            if v["type"] == "bool":
+                pbounds[k] = (0, 1)
+            elif v["type"] == "nominal":
+                pbounds[k] = (0, len(v["values"]) - 1)
+            else:
+                pbounds[k] = v["range"]
 
         optimizer = BayesianOptimization(
             f=objective_function,
