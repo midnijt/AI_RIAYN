@@ -7,6 +7,7 @@ from bayes_opt import BayesianOptimization
 from torch.utils.data import DataLoader, TensorDataset
 from copy import deepcopy
 from .base import BaseModel
+from .optimizer import CosineAnnealingLRWithWarmup, SWALookahead
 import sys
 
 sys.path.append("/Users/jtam/projects/AI_RIAYN/code/")
@@ -110,13 +111,27 @@ class RegularizedMLP(nn.Module, BaseModel):
         n_epochs = n_snapshots * snapshot_interval
 
         weight_decay = (params["WD-active"] > 0.5) * params["WD-decay_factor"]
-        optimizer = optim.AdamW(
+        base_optimizer = optim.AdamW(
             self.model.parameters(),
             lr=self.learning_rate,
             weight_decay=weight_decay,
         )
 
-        scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, n_epochs)
+        optimizer = SWALookahead(
+            base_optimizer,
+            swa=(params["SWA-active"] > 0.5),
+            swa_start=50,
+            swa_freq=5,
+            swa_lr=None,
+            lookahead=(params["LA-active"] > 0.5),
+            la_steps=params["LA-steps"],
+            la_alpha=params["LA-alpha"],
+        )
+
+        warmup_epochs = 10
+        scheduler = CosineAnnealingLRWithWarmup(
+            optimizer, warmup_epochs, n_epochs, eta_min=0, last_epoch=-1
+        )
 
         train_loader, val_loader = self._prepare_data(
             X_train, y_train, X_val, y_val, batch_size=batch_size, device=device

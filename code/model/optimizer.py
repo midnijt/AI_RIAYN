@@ -1,0 +1,121 @@
+import torch
+import torch.optim as optim
+import math
+
+
+class CosineAnnealingLRWithWarmup(optim.lr_scheduler._LRScheduler):
+    def __init__(
+        self, optimizer, warmup_epochs, total_epochs, eta_min=0, last_epoch=-1
+    ):
+        self.warmup_epochs = warmup_epochs
+        self.total_epochs = total_epochs
+        self.eta_min = eta_min
+        super().__init__(optimizer, last_epoch)
+
+    def get_lr(self):
+        if self.last_epoch < self.warmup_epochs:
+            return [
+                base_lr * (self.last_epoch + 1) / self.warmup_epochs
+                for base_lr in self.base_lrs
+            ]
+        else:
+            cosine_epochs = self.last_epoch - self.warmup_epochs
+            cosine_total_epochs = self.total_epochs - self.warmup_epochs
+            return [
+                self.eta_min
+                + (base_lr - self.eta_min)
+                * (1 + math.cos(math.pi * cosine_epochs / cosine_total_epochs))
+                / 2
+                for base_lr in self.base_lrs
+            ]
+
+
+class SWALookahead(optim.Optimizer):
+    def __init__(
+        self,
+        optimizer,
+        swa=True,
+        swa_start=50,
+        swa_freq=5,
+        swa_lr=None,
+        lookahead=True,
+        la_steps=5,
+        la_alpha=0.8,
+    ):
+        self.optimizer = optimizer
+        self.swa = swa
+        self.swa_start = swa_start
+        self.swa_freq = swa_freq
+        self.swa_lr = swa_lr
+        self.lookahead = lookahead
+        self.la_steps = la_steps
+        self.la_alpha = la_alpha
+        self._step_counter = 0
+
+        if self.swa:
+            self.swa_state = [
+                {"n_avg": 0, "swa_buffer": torch.zeros_like(p.data)}
+                for p in self.optimizer.param_groups[0]["params"]
+            ]
+
+        if self.lookahead:
+            self._backup_and_reset()
+
+        super().__init__(optimizer.param_groups, optimizer.defaults)
+
+    def _backup_and_reset(self):
+        self.backup_params = [
+            p.clone().detach() for pg in self.param_groups for p in pg["params"]
+        ]
+
+        self.optimizer.zero_grad()
+
+    def _restore(self):
+        for p, backup_p in zip(
+            (p for pg in self.param_groups for p in pg["params"]), self.backup_params
+        ):
+            p.data.copy_(backup_p)
+
+    def _lookahead_step(self):
+        for group, backup_param in zip(self.param_groups, self.backup_params):
+            for p, backup_p in zip(group["params"], backup_param):
+                backup_p.data.add_(p.data - backup_p.data, alpha=self.la_alpha)
+                p.data.copy_(backup_p.data)
+
+    def _swa_step(self):
+        for group, swa_state in zip(self.param_groups, self.swa_state):
+            for p, state in zip(group["params"], swa_state):
+                state["n_avg"] += 1
+                state["swa_buffer"].add_(
+                    p.data - state["swa_buffer"], alpha=1.0 / state["n_avg"]
+                )
+                p.data.copy_(state["swa_buffer"])
+
+    def update_swa_lr(self):
+        if self.swa_lr is not None:
+            for param_group in self.param_groups:
+                param_group["lr"] = self.swa_lr
+
+    def apply_swa(self):
+        for group, swa_state in zip(self.param_groups, self.swa_state):
+            for p, state in zip(group["params"], swa_state):
+                p.data.copy_(state["swa_buffer"])
+
+    def step(self, closure=None):
+        loss = self.optimizer.step(closure)
+        self._step_counter += 1
+
+        if self.lookahead:
+            if self._step_counter % self.la_steps == 0:
+                self._lookahead_step()
+
+        if (
+            self.swa
+            and self._step_counter > self.swa_start
+            and self._step_counter % self.swa_freq == 0
+        ):
+            self._swa_step()
+            if self.swa_lr is not None and self._step_counter == self.swa_start:
+                self.update_swa_lr()
+
+        return loss
