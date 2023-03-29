@@ -124,8 +124,8 @@ class RegularizedMLP(nn.Module, BaseModel):
             swa_freq=5,
             swa_lr=None,
             lookahead=(params["LA-active"] > 0.5),
-            la_steps=params["LA-steps"],
-            la_alpha=params["LA-alpha"],
+            la_steps=params["LA-num_steps"],
+            la_alpha=params["LA-step_size"],
         )
 
         warmup_epochs = 10

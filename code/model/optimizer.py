@@ -54,18 +54,22 @@ class SWALookahead(optim.Optimizer):
 
         if self.swa:
             self.swa_state = [
-                {"n_avg": 0, "swa_buffer": torch.zeros_like(p.data)}
-                for p in self.optimizer.param_groups[0]["params"]
+                [
+                    {"n_avg": 0, "swa_buffer": torch.zeros_like(p.data)}
+                    for p in param_group["params"]
+                ]
+                for param_group in self.optimizer.param_groups
             ]
 
         if self.lookahead:
             self._backup_and_reset()
-
-        super().__init__(optimizer.param_groups, optimizer.defaults)
+        super(SWALookahead, self).__init__(optimizer.param_groups, optimizer.defaults)
 
     def _backup_and_reset(self):
         self.backup_params = [
-            p.clone().detach() for pg in self.param_groups for p in pg["params"]
+            p.clone().detach()
+            for pg in self.optimizer.param_groups
+            for p in pg["params"]
         ]
 
         self.optimizer.zero_grad()
@@ -77,14 +81,16 @@ class SWALookahead(optim.Optimizer):
             p.data.copy_(backup_p)
 
     def _lookahead_step(self):
-        for group, backup_param in zip(self.param_groups, self.backup_params):
-            for p, backup_p in zip(group["params"], backup_param):
-                backup_p.data.add_(p.data - backup_p.data, alpha=self.la_alpha)
-                p.data.copy_(backup_p.data)
+        for p, backup_p in zip(
+            (p for pg in self.optimizer.param_groups for p in pg["params"]),
+            self.backup_params,
+        ):
+            backup_p.data.add_(p.data - backup_p.data, alpha=self.la_alpha)
+            p.data.copy_(backup_p.data)
 
     def _swa_step(self):
-        for group, swa_state in zip(self.param_groups, self.swa_state):
-            for p, state in zip(group["params"], swa_state):
+        for group, group_swa_state in zip(self.param_groups, self.swa_state):
+            for p, state in zip(group["params"], group_swa_state):
                 state["n_avg"] += 1
                 state["swa_buffer"].add_(
                     p.data - state["swa_buffer"], alpha=1.0 / state["n_avg"]
