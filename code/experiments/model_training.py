@@ -32,7 +32,7 @@ def train_and_evaluate_model(dataset, is_regression=False):
         n_outputs=n_outputs,
         search_space=search_space.mlp,
         n_layers=9,
-        n_hidden_units=7,
+        n_hidden_units=512,
         device="cpu",
     )
 

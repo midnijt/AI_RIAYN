@@ -7,7 +7,7 @@ from sklearn.metrics import accuracy_score, mean_squared_error
 from torch.utils.data import DataLoader, TensorDataset
 
 from copy import deepcopy
-from .optimizer import CosineAnnealingLRWithWarmup, SWALookahead
+from .optimizer import SWALookahead
 from .base import BaseModel
 from .architectures import Architectures
 import sys

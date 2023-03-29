@@ -1,6 +1,5 @@
 import torch
 import torch.optim as optim
-import math
 
 
 class SWALookahead(optim.Optimizer):
