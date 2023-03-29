@@ -45,19 +45,3 @@ class XGBoost(BaseModel):
         y_pred = self.model.predict(X)
         acc = accuracy_score(y, y_pred)
         return acc
-
-
-xgb_search_space = {
-    "eta": {"type": "float", "range": [0.001, 1.0]},
-    "lambda": {"type": "float", "range": [1e-10, 1.0]},
-    "alpha": {"type": "float", "range": [1e-10, 1.0]},
-    "num_round": {"type": "int", "range": [1, 1000]},
-    "gamma": {"type": "float", "range": [0.1, 1.0]},
-    "colsample_bylevel": {"type": "float", "range": [0.1, 1.0]},
-    "colsample_bynode": {"type": "float", "range": [0.1, 1.0]},
-    "colsample_bytree": {"type": "float", "range": [0.5, 1.0]},
-    "max_depth": {"type": "int", "range": [1, 20]},
-    "max_delta_step": {"type": "int", "range": [0, 10]},
-    "min_child_weight": {"type": "float", "range": [0.1, 20.0]},
-    "subsample": {"type": "float", "range": [0.01, 1.0]},
-}

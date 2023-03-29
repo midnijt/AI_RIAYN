@@ -5,8 +5,9 @@ from sklearn.preprocessing import StandardScaler
 import sys
 
 sys.path.append("/Users/jtam/projects/AI_RIAYN/code/")
-from model.mlp import RegularizedMLP, mlp_search_space
-from model.xgboost import XGBoost, xgb_search_space
+from model.NeuralNet import NeuralNet
+from model.xgboost import XGBoost
+import model.search_space as search_space
 
 
 def main():
@@ -26,11 +27,11 @@ def main():
     X_test = scaler.transform(X_test)
 
     # Train and evaluate MLP
-    mlp = RegularizedMLP(
+    mlp = NeuralNet(
         n_inputs=X_train.shape[1],
         n_outputs=len(np.unique(y_train)),
-        search_space=mlp_search_space,
-        n_layers=1,
+        search_space=search_space.mlp,
+        n_layers=2,
         n_hidden_units=64,
     )
 
@@ -47,7 +48,7 @@ def main():
     print("Best MLP parameters:", mlp_params)
 
     # Train and evaluate XGBoost
-    xgb = XGBoost(search_space=xgb_search_space)
+    xgb = XGBoost(search_space=search_space.xgb)
 
     xgb_params = xgb.hyperparameter_tuning(
         X_train=X_train, y_train=y_train, X_val=X_test, y_val=y_test

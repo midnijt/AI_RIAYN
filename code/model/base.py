@@ -33,7 +33,7 @@ class BaseModel(ABC):
             if v["type"] == "bool":
                 pbounds[k] = (0, 1)
             elif v["type"] == "nominal":
-                pbounds[k] = (0, len(v["values"]) - 1)
+                pbounds[k] = (0, len(v["values"]))
             else:
                 pbounds[k] = v["range"]
 
