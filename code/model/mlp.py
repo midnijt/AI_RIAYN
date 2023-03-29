@@ -40,7 +40,7 @@ class RegularizedMLP(nn.Module):
             nn.ReLU(),
         ]
 
-        for _ in range(7):
+        for _ in range(self.n_layers - 2):
             layers.extend(
                 [
                     nn.Linear(self.n_hidden_units, self.n_hidden_units),
@@ -60,25 +60,13 @@ class RegularizedMLP(nn.Module):
 
         self.model = nn.Sequential(*layers)
 
-    def fit(self, X_train, y_train, X_val, y_val, params, device="cpu", batch_size=32):
-        self.build_model(**params)
-        self.model.to(device)
-
+    def _prepare_data(
+        self, X_train, y_train, X_val, y_val, batch_size=32, device="cpu"
+    ):
         train_data = TensorDataset(
             torch.tensor(X_train, dtype=torch.float32).to(device),
             torch.tensor(y_train, dtype=torch.long).to(device),
         )
-
-        if params["Augment"] == "MU":
-            augmentation = MixUp1D(alpha=params["MU-mix_mag"])
-        elif params["Augment"] == "CM":
-            augmentation = CutMix1D(alpha=params["CM-prob"])
-        elif params["Augment"] == "CO":
-            augmentation = CutOut1D(
-                p=int(params["CO-prob"] * X_train.shape[1]),
-            )
-        else:
-            augmentation = None
 
         train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 
@@ -87,6 +75,27 @@ class RegularizedMLP(nn.Module):
             torch.tensor(y_val, dtype=torch.long).to(device),
         )
         val_loader = DataLoader(val_data, batch_size=batch_size)
+
+        return train_loader, val_loader
+
+    def _prepare_augmentation(self, params, data_shape):
+        if params["Augment"] == "MU":
+            augmentation = MixUp1D(alpha=params["MU-mix_mag"])
+        elif params["Augment"] == "CM":
+            augmentation = CutMix1D(alpha=params["CM-prob"])
+        elif params["Augment"] == "CO":
+            augmentation = CutOut1D(
+                p=int(params["CO-prob"] * data_shape[1]),
+            )
+        else:
+            augmentation = None
+
+        return augmentation
+
+    def fit(self, X_train, y_train, X_val, y_val, params, device="cpu", batch_size=32):
+        self.build_model(**params)
+        self.model.to(device)
+
         criterion = nn.CrossEntropyLoss()
         best_model = None
         best_val_loss = float("inf")
@@ -105,6 +114,10 @@ class RegularizedMLP(nn.Module):
 
         scheduler = optim.lr_scheduler.CosineAnnealingLR(optimizer, n_epochs)
 
+        train_loader, val_loader = self._prepare_data(
+            X_train, y_train, X_val, y_val, batch_size=batch_size, device=device
+        )
+        augmentation = self._prepare_augmentation(params, data_shape=X_train.shape)
         for epoch in range(n_epochs):
             self.model.train()
 
@@ -260,20 +273,6 @@ mlp_search_space = {
     "DO-active": {
         "type": "bool",
         "default": False,
-    },
-    "DO-shape": {
-        "type": "nominal",
-        "default": "funnel",
-        "conditions": ["DO-active"],
-        "values": [
-            "funnel",
-            "long funnel",
-            "diamond",
-            "hexagon",
-            "brick",
-            "triangle",
-            "stairs",
-        ],
     },
     "DO-dropout_rate": {
         "type": "float",
