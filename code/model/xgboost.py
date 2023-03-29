@@ -2,7 +2,7 @@ import numpy as np
 from sklearn.metrics import accuracy_score
 from xgboost import XGBClassifier
 from bayes_opt import BayesianOptimization
-from base import BaseModel
+from .base import BaseModel
 
 
 class XGBoost(BaseModel):

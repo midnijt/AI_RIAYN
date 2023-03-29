@@ -30,7 +30,7 @@ def main():
         n_inputs=X_train.shape[1],
         n_outputs=len(np.unique(y_train)),
         search_space=mlp_search_space,
-        n_layers=3,
+        n_layers=1,
         n_hidden_units=64,
     )
 
