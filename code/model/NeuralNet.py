@@ -36,6 +36,7 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         self.n_hidden_units = n_hidden_units
         self.learning_rate = learning_rate
         self.regression = n_outputs == 1
+        self.y_dtype = torch.float32 if self.regression else torch.long
 
     def build_model(self, **params):
         params["regression"] = self.regression
@@ -58,14 +59,14 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
     ):
         train_data = TensorDataset(
             torch.tensor(X_train, dtype=torch.float32).to(device),
-            torch.tensor(y_train, dtype=torch.float32).to(device),
+            torch.tensor(y_train, dtype=self.y_dtype).to(device),
         )
 
         train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 
         val_data = TensorDataset(
             torch.tensor(X_val, dtype=torch.float32).to(device),
-            torch.tensor(y_val, dtype=torch.float32).to(device),
+            torch.tensor(y_val, dtype=self.y_dtype).to(device),
         )
         val_loader = DataLoader(val_data, batch_size=batch_size)
 
@@ -182,7 +183,7 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         self.model.eval()
         self.model.to(device)
         X_tensor = torch.tensor(X, dtype=torch.float32).to(device)
-        y_tensor = torch.tensor(y, dtype=torch.float32).to(device)
+        y_tensor = torch.tensor(y, dtype=self.y_dtype).to(device)
         y_pred = self.model(X_tensor)
         with torch.no_grad():
             if self.regression:
