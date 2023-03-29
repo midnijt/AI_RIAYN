@@ -29,7 +29,6 @@ class MixUp1D:
         :return: Augmented batch of 1D vectors
         """
         data2 = data[torch.randperm(data.size(0))]
-
         lam = torch.distributions.Beta(self.alpha, self.alpha).sample()
         return lam * data + (1 - lam) * data2
 

@@ -97,11 +97,11 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
             criterion = nn.CrossEntropyLoss()
         best_model = None
         best_val_loss = float("inf")
-        patience = 10
+        patience = 1
         patience_counter = 0
 
         n_snapshots = 5
-        snapshot_interval = 20
+        snapshot_interval = 1
         n_epochs = n_snapshots * snapshot_interval
 
         weight_decay = (params["WD-active"] > 0.5) * params["WD-decay_factor"]
@@ -190,5 +190,7 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
                 metric = mean_squared_error(y_tensor.cpu(), y_pred.cpu())
             else:
                 _, y_pred = torch.max(y_pred, 1)
-                metric = accuracy_score(y_tensor.cpu(), y_pred.cpu())
+                metric = -accuracy_score(
+                    y_tensor.cpu(), y_pred.cpu()
+                )  # smaller is better
         return metric

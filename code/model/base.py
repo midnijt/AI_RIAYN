@@ -25,15 +25,16 @@ class BaseModel(ABC):
                 if v["type"] == "int":
                     params[k] = int(params[k])
             self.fit(X_train, y_train, X_val, y_val, params)
-            acc = self.evaluate(X_val, y_val)
-            return -acc
+            metric = self.evaluate(X_val, y_val)
+            return -metric
 
+        eps = 1e-6
         pbounds = {}
         for k, v in self.search_space.items():
             if v["type"] == "bool":
                 pbounds[k] = (0, 1)
             elif v["type"] == "nominal":
-                pbounds[k] = (0, len(v["values"]))
+                pbounds[k] = (0 + eps, len(v["values"]) - eps)
             else:
                 pbounds[k] = v["range"]
 
