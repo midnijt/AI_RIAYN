@@ -1,3 +1,4 @@
+import torch
 import numpy as np
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import StandardScaler
@@ -33,7 +34,7 @@ def train_and_evaluate_model(dataset, is_regression=False):
         search_space=search_space.mlp,
         n_layers=9,
         n_hidden_units=512,
-        device="cpu",
+        device="cuda" if torch.cuda.is_available() else "cpu",
     )
 
     mlp_params = mlp.hyperparameter_tuning(
