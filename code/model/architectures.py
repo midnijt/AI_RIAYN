@@ -41,95 +41,45 @@ class Architectures:
 
         return hidden_layer
 
-    def MLP(self, **params):
+    def create_model(self, arch_type, **params):
         layers = [
             nn.Linear(self.n_inputs, self.n_hidden_units),
             nn.ReLU(),
         ]
 
         for _ in range(self.n_layers):
-            layers.extend(self.create_hidden_layer("MLP", **params))
+            if arch_type == "MLP":
+                layers.extend(self.create_hidden_layer(arch_type, **params))
+            elif arch_type == "SC":
+                layers.append(self.create_hidden_layer(arch_type, **params))
+            elif arch_type == "SS":
+                path1 = self.create_hidden_layer(arch_type, **params)
+                path2 = self.create_hidden_layer(arch_type, **params)
+                layers.append(Shake(nn.Sequential(*path1), nn.Sequential(*path2)))
+            elif arch_type == "SD":
+                path1 = self.create_hidden_layer(arch_type, **params)
+                path2 = self.create_hidden_layer(arch_type, **params)
+                shake_drop_layer = Lambda(
+                    lambda x: shake_drop(x, params["SD-max_prob"])
+                    if self.training
+                    else x
+                )
+                layers.append(nn.Sequential(*path1, *path2, shake_drop_layer))
 
         layers.append(nn.Linear(self.n_hidden_units, self.n_outputs))
         if not params["regression"]:
             layers.append(nn.Softmax(dim=1))
 
         self.model = nn.Sequential(*layers)
+
+    def MLP(self, **params):
+        self.create_model("MLP", **params)
 
     def SC(self, **params):
-        layers = [
-            nn.Linear(self.n_inputs, self.n_hidden_units),
-            nn.ReLU(),
-        ]
-
-        for _ in range(self.n_layers):
-            layers.append(self.create_hidden_layer("SC", **params))
-
-        layers.append(nn.Linear(self.n_hidden_units, self.n_outputs))
-        if not params["regression"]:
-            layers.append(nn.Softmax(dim=1))
-
-        self.model = nn.Sequential(*layers)
+        self.create_model("SC", **params)
 
     def SS(self, **params):
-        class Shake(nn.Module):
-            def __init__(self, path1, path2):
-                super(Shake, self).__init__()
-                self.path1 = path1
-                self.path2 = path2
-
-            def forward(self, x):
-                x1 = self.path1(x)
-                x2 = self.path2(x)
-                alpha = torch.rand(x1.shape[0], 1).to(x1.device)
-                if not self.training:
-                    # During evaluation, use the average of the two paths
-                    alpha = 0.5 * torch.ones_like(alpha)
-
-                return alpha * x1 + (1 - alpha) * x2
-
-        layers = [
-            nn.Linear(self.n_inputs, self.n_hidden_units),
-            nn.ReLU(),
-        ]
-
-        for _ in range(self.n_layers):
-            path1 = self.create_hidden_layer("SS", **params)
-            path2 = self.create_hidden_layer("SS", **params)
-            layers.append(Shake(nn.Sequential(*path1), nn.Sequential(*path2)))
-
-        layers.append(nn.Linear(self.n_hidden_units, self.n_outputs))
-        if not params["regression"]:
-            layers.append(nn.Softmax(dim=1))
-
-        self.model = nn.Sequential(*layers)
+        self.create_model("SS", **params)
 
     def SD(self, **params):
-        def shake_drop(x, p_drop):
-            if p_drop == 0.0:
-                return x
-            else:
-                batch_size = x.shape[0]
-                mask = torch.bernoulli(torch.ones(batch_size, 1) * (1 - p_drop)).to(
-                    x.device
-                )
-                return mask * x / (1 - p_drop)
-
-        layers = [
-            nn.Linear(self.n_inputs, self.n_hidden_units),
-            nn.ReLU(),
-        ]
-
-        for _ in range(self.n_layers):
-            path1 = self.create_hidden_layer("SD", **params)
-            path2 = self.create_hidden_layer("SD", **params)
-            shake_drop_layer = Lambda(
-                lambda x: shake_drop(x, params["SD-max_prob"]) if self.training else x
-            )
-            layers.append(nn.Sequential(*path1, *path2, shake_drop_layer))
-
-        layers.append(nn.Linear(self.n_hidden_units, self.n_outputs))
-        if not params["regression"]:
-            layers.append(nn.Softmax(dim=1))
-
-        self.model = nn.Sequential(*layers)
+        self.create_model("SD", **params)
