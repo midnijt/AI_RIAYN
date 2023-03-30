@@ -57,18 +57,23 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
             self.MLP(**params)
 
     def _prepare_data(
-        self, X_train, y_train, X_val, y_val, batch_size=32, device="cpu"
+        self,
+        X_train,
+        y_train,
+        X_val,
+        y_val,
+        batch_size=32,
     ):
         train_data = TensorDataset(
-            torch.tensor(X_train, dtype=torch.float32).to(device),
-            torch.tensor(y_train, dtype=self.y_dtype).to(device),
+            torch.tensor(X_train, dtype=torch.float32).to(self.device),
+            torch.tensor(y_train, dtype=self.y_dtype).to(self.device),
         )
 
         train_loader = DataLoader(train_data, batch_size=batch_size, shuffle=True)
 
         val_data = TensorDataset(
-            torch.tensor(X_val, dtype=torch.float32).to(device),
-            torch.tensor(y_val, dtype=self.y_dtype).to(device),
+            torch.tensor(X_val, dtype=torch.float32).to(self.device),
+            torch.tensor(y_val, dtype=self.y_dtype).to(self.device),
         )
         val_loader = DataLoader(val_data, batch_size=batch_size)
 
@@ -139,7 +144,7 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
         )
 
         train_loader, val_loader = self._prepare_data(
-            X_train, y_train, X_val, y_val, batch_size=batch_size, device=self.device
+            X_train, y_train, X_val, y_val, batch_size=batch_size
         )
         augmentation = self._prepare_augmentation(params, data_shape=X_train.shape)
         learning_rates = []
@@ -191,11 +196,11 @@ class NeuralNet(nn.Module, BaseModel, Architectures):
 
         self.model = best_model
 
-    def evaluate(self, X, y, device="cpu"):
+    def evaluate(self, X, y):
         self.model.eval()
-        self.model.to(device)
-        X_tensor = torch.tensor(X, dtype=torch.float32).to(device)
-        y_tensor = torch.tensor(y, dtype=self.y_dtype).to(device)
+        self.model.to(self.device)
+        X_tensor = torch.tensor(X, dtype=torch.float32).to(self.device)
+        y_tensor = torch.tensor(y, dtype=self.y_dtype).to(self.device)
         y_pred = self.model(X_tensor)
         with torch.no_grad():
             if self.regression:
