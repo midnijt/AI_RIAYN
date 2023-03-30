@@ -20,6 +20,32 @@ class Lambda(nn.Module):
         return self.func(x)
 
 
+class Shake(nn.Module):
+    def __init__(self, path1, path2):
+        super(Shake, self).__init__()
+        self.path1 = path1
+        self.path2 = path2
+
+    def forward(self, x):
+        x1 = self.path1(x)
+        x2 = self.path2(x)
+        alpha = torch.rand(x1.shape[0], 1).to(x1.device)
+        if not self.training:
+            # During evaluation, use the average of the two paths
+            alpha = 0.5 * torch.ones_like(alpha)
+
+        return alpha * x1 + (1 - alpha) * x2
+
+
+def shake_drop(x, p_drop):
+    if p_drop == 0.0:
+        return x
+    else:
+        batch_size = x.shape[0]
+        mask = torch.bernoulli(torch.ones(batch_size, 1) * (1 - p_drop)).to(x.device)
+        return mask * x / (1 - p_drop)
+
+
 class Architectures:
     def create_hidden_layer(self, arch_type, **params):
         hidden_layer = [
